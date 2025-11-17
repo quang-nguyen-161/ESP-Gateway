@@ -102,10 +102,25 @@ void setup() {
 }
 
 void loop() {
-  // Send message every 5 seconds
-  //client.loop();
- 
+  client.loop();   // MQTT keep-alive
+
+  if (LoraMessageReceived) {
+    LoraMessageReceived = false;   // Reset flag
+
+    // Convert LoRa payload to JSON
+    String jsonStr = parseToJson(payload);
+
+    Serial.print("Publishing to ThingsBoard: ");
+    Serial.println(jsonStr);
+
+    // Publish to telemetry
+    client.publish("v1/devices/me/telemetry", jsonStr.c_str());
+
+    // After sending, go back to RX mode
+    LoRa_rxMode();
+  }
 }
+
 
 // Switch LoRa to receive mode
 void LoRa_rxMode() {
@@ -135,8 +150,11 @@ void onReceive(int packetSize) {
     message += (char)LoRa.read();
   }
 
- Serial.print("Gateway Receive: ");
+  Serial.print("Gateway Receive: ");
   Serial.println(message);
+
+  payload = message;          // Save LoRa data
+  LoraMessageReceived = true; // Set flag
 }
 
 // Callback when TX is done
